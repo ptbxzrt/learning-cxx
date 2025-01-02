@@ -1,4 +1,8 @@
 ﻿#include "../exercise.h"
+#include <array>
+#include <cstddef>
+#include <cstring>
+#include <exception>
 
 // READ: 类模板 <https://zh.cppreference.com/w/cpp/language/class_template>
 
@@ -10,6 +14,10 @@ struct Tensor4D {
     Tensor4D(unsigned int const shape_[4], T const *data_) {
         unsigned int size = 1;
         // TODO: 填入正确的 shape 并计算 size
+        for (int i = 0; i < 4; i++) {
+            shape[i] = shape_[i];
+            size *= shape[i];
+        }
         data = new T[size];
         std::memcpy(data, data_, size * sizeof(T));
     }
@@ -28,6 +36,44 @@ struct Tensor4D {
     // 则 `this` 与 `others` 相加时，3 个形状为 `[1, 2, 1, 4]` 的子张量各自与 `others` 对应项相加。
     Tensor4D &operator+=(Tensor4D const &others) {
         // TODO: 实现单向广播的加法
+        std::array<int, 4> broadcast{0, 0, 0, 0};
+        for (std::size_t i = 0; i < broadcast.size(); i++) {
+            if (shape[i] != others.shape[i]) {
+                ASSERT(others.shape[i] == 1, "形状不同的维度长度必须为 1");
+                broadcast[i] = 1;
+            }
+        }
+
+        T *dst = data;
+        T *src = others.data;
+        std::array<T *, 4> records;
+        records[0] = src;
+        for (unsigned int s0 = 0; s0 < shape[0]; s0++) {
+            if (broadcast[0] == 1) {
+                src = records[0];
+            }
+            records[1] = src;
+            for (unsigned int s1 = 0; s1 < shape[1]; s1++) {
+                if (broadcast[1] == 1) {
+                    src = records[1];
+                }
+                records[2] = src;
+                for (unsigned int s2 = 0; s2 < shape[2]; s2++) {
+                    if (broadcast[2] == 1) {
+                        src = records[2];
+                    }
+                    records[3] = src;
+                    for (unsigned int s3 = 0; s3 < shape[3]; s3++) {
+                        if (broadcast[3] == 1) {
+                            src = records[3];
+                        }
+                        *dst += *src;
+                        dst++, src++;
+                    }
+                }
+            }
+        }
+
         return *this;
     }
 };
